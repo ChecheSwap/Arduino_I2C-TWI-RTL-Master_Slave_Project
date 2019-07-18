@@ -2,10 +2,13 @@
 #include <Arduino.h>
 #include "seven_segslcd.h"
 #include <Wire.h>
+
 #define PIN_LED 14
 #define KEY_LED 17
 #define PIN_TRIG  13 
 #define PIN_ECHO  12
+#define CONST_TIME_1 29.1
+#define CONST_TIME_TRANSLATE 2
 
 seven_segslcd * obj_lcd = new seven_segslcd(100);
 
@@ -101,7 +104,7 @@ void _S0(){
     w2 ^= 1; 
     
     xduration = pulseIn(PIN_ECHO, HIGH);
-    xdistance = xduration /29.1/2;   
+    xdistance = xduration /CONST_TIME_1/CONST_TIME_TRANSLATE;   
          
     if((xdistance >= 0) && (xdistance <20)){      
       obj_lcd->print_digit(1,0);     
