@@ -1,7 +1,7 @@
 //DEVELOPED BY @CHECHESWAP JESUS JOSE NAVARRETE BACA
-#include <Keypad.h> //LIBRERIA CONTROL DE TECLADO MATRICIAL
-#include <LiquidCrystal.h> //LIBRERIA CONTROL DE CRISTAL LIQUIDO
-#include "pt.h" //LIBRERIA DE CONTROL DE SUB PROCESOS
+#include <Keypad.h> 
+#include <LiquidCrystal.h> 
+#include "pt.h" 
 #include <Wire.h>
 
 #define pinact 2 //PIN LED
@@ -12,44 +12,44 @@
 #define pinSync 0 // PIN LED SINCRONIZADO
 
 
-static int pthDef(struct pt *, int, void(*)(void)); //IMAGEN DE FUNCION SUB PROCESO
-void lcdinit(void); //FUNCION 
+static int pthDef(struct pt *, int, void(*)(void)); 
+void lcdinit(void); 
 void alert(void);
-void readPass(void); //RUTINA QUE ESCUCHA LAS PULSACIONES DEL KEYPAD
-void textTitle(void); //RUTINA QUE IMPRIME TITULO EN LCD CON LOGICA DE BLINK
-void ledadvise(void); //RUTINA QUE ACTIVA LED ADVISE
-void lcdpwincorrect(void); //RUTINA QUE IMPRIME LA LEENDA PASSWORD INCORRECTO EN LCD
-void stopAlarm(void); //RUTINA QUE DESACTIVA MANIOBRA DE ACTIVACION DE ALARMA
-void listenFromJava(void); //PROCESO DE ESCUCHA AL SISTEMA POR SERIAL
-void welcomeMsg(void); // MENSAJE DE BIENVENIDO EN LCD
-void clsPass(void); //RUTINA QUE LIMPIA FILA DE PASSWORD EN LCD
-void deniedAccess(void); //RUTINA QUE ACTIVA ALARMA (LED + SONIDO)
-void printUnavailable(void); //RUTINA QUE IMPRIME EN LCD SISTEMA DESCONECTADO (CUANDO NO SE HA SINCRONIZADO)
-void clsUnavailable(); //LIMPIA LCS Y SINCRONIZA BANDERA DE EJECUCION 
+void readPass(void); 
+void textTitle(void); 
+void ledadvise(void); 
+void lcdpwincorrect(void); 
+void stopAlarm(void); 
+void listenFromJava(void); 
+void welcomeMsg(void); 
+void clsPass(void); 
+void deniedAccess(void); 
+void printUnavailable(void); 
+void clsUnavailable(); 
 
-void i2c_control(); //LECTOR ULTRASONICO Y CONTROL I2C
+void i2c_control(); 
 
-const byte ROWS = 4; //NUMERO DE FILAS DEL TECLADO
-const byte COLS = 4; //NUMERO DE COLUMNAS DEL TECLADO
-char keys[ROWS][COLS] = { //IMAGEN DEL TECLADO MATRICIAL
+const byte ROWS = 4; 
+const byte COLS = 4; 
+char keys[ROWS][COLS] = { 
   {'1', '2', '3', 'A'},
   {'4', '5', '6', 'B'},
   {'7', '8', '9', 'C'},
   {'*', '0', '#', 'D'}
 };
-byte ROWSPINS [] = {14, 15, 16, 17}; //PINES QUE LE CORRESPONDEN A LAS FILAS DEL TECLADO
-byte COLSPINS [] = {9, 10, 11, 12}; //PINES CORRESPONDIENTES A LAS COLUMNAS DEL TECLADO
-Keypad mykeypad = Keypad(makeKeymap(keys), ROWSPINS, COLSPINS, ROWS, COLS); //OBJETO TECLADO
+byte ROWSPINS [] = {14, 15, 16, 17}; 
+byte COLSPINS [] = {9, 10, 11, 12}; 
+Keypad mykeypad = Keypad(makeKeymap(keys), ROWSPINS, COLSPINS, ROWS, COLS); 
 //               rs,en,d4,d5,d6,d7
-LiquidCrystal lcd(7, 8, 3, 4, 5, 6); //OBJETO LCD
-const char arrtitleLCD [lcdCols] = "  >>> S.G.B.S <<<  "; //LEYENDA DE TITULO USANDO PREFIX-ARRAY
-const char* msg = "  => Bienvenido <= "; //LEYENDA INICIO USINR POINTER
-const char* deniedmsg = " =>Acceso Denegado! "; //LEYENDA DENEGADO USING POINTER
-const char * rowCls = "                    "; //LEYENDA LIMPIAR FILA USING POINTER
-const char * closedsystem = "Sistema Desconectado";//LEYENDA NO SINCRONIZADO USING POINTER
-const char keyClear = '#'; //CARACTER BACKSPACE PARA PASSWORD
-const char keyStopAlarm = 'D'; //CARACTER PARA ALARMA
-const char keyAccept = '*'; //CARACTER ENVIA PASSWORD A SISTEMA
+LiquidCrystal lcd(7, 8, 3, 4, 5, 6);
+const char arrtitleLCD [lcdCols] = "  >>> S.G.B.S <<<  "; 
+const char* msg = "  => Bienvenido <= "; 
+const char* deniedmsg = " =>Acceso Denegado! "; 
+const char * rowCls = "                    "; 
+const char * closedsystem = "Sistema Desconectado";
+const char keyClear = '#'; 
+const char keyStopAlarm = 'D'; 
+const char keyAccept = '*'; 
 
 
 static struct pt pth1; //NODO DE HILO #1
@@ -59,21 +59,21 @@ static struct pt pth4; //NODO DE HILO #4
 static struct pt pth5; //NODO DE HILO #5
 static struct pt pth6; //NODO DE HILO #6
 static struct pt pth7; //NODO DE HILO #7
-boolean flagBlink = false; //BANDERA BLINK PARA TITULO EN LCD
-boolean alertStatus = false;  //BANDERA BLINK PARA EMISION DE ALERTA*
-boolean flagledadvise = false; //BANDERA LED AVISO
-boolean listenalert = false; //STATUS DE ALERTA
-boolean isScrolling = false; //BANDERA BLINK PARA MENSAJE DE BIENVENIDA
+boolean flagBlink = false; 
+boolean alertStatus = false;  
+boolean flagledadvise = false; 
+boolean listenalert = false; 
+boolean isScrolling = false; 
 boolean daemonMsg = true; //FOR WELCOME MSG IN A SUB THREAD MANAGMENT
 boolean killDenied = true; // FOR DENIED MSG IN A SUB THREAD MANAGMENT
-boolean isScrollingDenied = false;// BANDERA BLINK PARA MENSAJE DE CONTRASENA INCORRECTA
+boolean isScrollingDenied = false;
 boolean systemStatus = true; //STAUS DEL SISTEMA (1 = ACCEDIDO AL SISTEMA, 0 = EN ESPERA DE ACCESO)
 boolean synchronized = false; //STATUS DEL SISTEMA (1 = SINCRONIZADO CON SOFTWARE APLICACION 0=DESCONECTADO)
-boolean unvst = false; //BANDERA DE STATUS PARA IMPRIMIR LEYENDA DESCONECTADO
-boolean goliat = false; //BANDERA TRANSITORIO CUANDO PASA SISTEMA DE NO SINCRONIZADO A SINCRONIZADO (INICIAL)*
-int passwordCount = 0; //CONTEO DE LENGTH DE PASS ACTUAL
-char arrPass[pwdLength + 1] = {}; //PASS CONCAT
-int tmpcol = 0; //COLUMNA ACTUAL DE LCD, INDICE DE PASS CONCAT
+boolean unvst = false; 
+boolean goliat = false; 
+int passwordCount = 0; 
+char arrPass[pwdLength + 1] = {}; 
+int tmpcol = 0; 
 
 
 //PUNTEROS A FUNCIONES EMPLEADOS COMO DESENCADENADORES DE LAS SUB-RUTINAS QUE SE EJECUTAN EN LOS SUB-THREADS
