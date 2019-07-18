@@ -1,4 +1,4 @@
-
+//Powered by: @CHECHESWAP JESUS JOSE NAVARRETE BACA JUNIO 2019
 #include <Arduino.h>
 #include "seven_segslcd.h"
 #include <Wire.h>
